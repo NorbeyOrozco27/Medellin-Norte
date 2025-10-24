@@ -338,6 +338,7 @@ function evaluarRetrasoSalida() {
 
     if (salidaProgramadaVal && salidaRealVal) {
         const minutosRetraso = diffInMinutes(salidaProgramadaVal, salidaRealVal);
+        // ✅ CORRECCIÓN: Considerar minuto de gracia (retraso > 1 minuto)
         if (minutosRetraso > 1) {
             retrasoContainer.style.display = 'block';
         } else {
@@ -345,7 +346,6 @@ function evaluarRetrasoSalida() {
         }
     }
 }
-
 function validarLlegadaFinal(ruta) {
     // ✅ CORREGIDO: Usar CONFIG_MEDELLIN_NORTE en lugar de CONFIG_PUNTOS_CONTROL
      const ultimoId = CONFIG_MEDELLIN_NORTE.CONFIG_PUNTOS_CONTROL[ruta][CONFIG_MEDELLIN_NORTE.CONFIG_PUNTOS_CONTROL[ruta].length - 1].id;
@@ -369,6 +369,7 @@ function clasificarViaje(ruta, salidaProgramada, salidaReal, puntosControlData) 
     const motivoLlegada = ultimoPunto.motivo;
 
     const retrasoSalidaMin = diffInMinutes(salidaProgramada, salidaReal);
+    // ✅ CORRECCIÓN: Considerar minuto de gracia (retraso > 1 minuto)
     const retrasoSalida = retrasoSalidaMin > 1;
     const justificadoSalida = document.querySelector('input[name="retraso_salida_justificado"]:checked')?.value === 'si';
 
@@ -403,7 +404,6 @@ function clasificarViaje(ruta, salidaProgramada, salidaReal, puntosControlData) 
         puntos_control_detalle: puntosControlData
     };
 }
-
 function inicializarEventosFormulario() {
     const rutaSelect = document.getElementById('ruta');
     const salidaProgramada = document.getElementById('salida_programada');
@@ -1151,8 +1151,8 @@ function generarTablaDetalles(conductor, evidencias) {
 }
 
 // ===== CARGAR REGISTROS (FUNCIONAL COMPLETA) =====
-async function cargarRegistros() {
-    console.log('DEBUG: Iniciando carga de registros...');  // DEBUG: Confirma ejecución
+async function cargarRegistros() { ///cambio de funcion 
+    console.log('DEBUG: Iniciando carga de registros...');
     const tablaContainer = document.getElementById('tabla-registros-container');
     const btnCargar = document.getElementById('btn-cargar-registros');
 
@@ -1165,33 +1165,24 @@ async function cargarRegistros() {
     btnCargar.disabled = true;
 
     try {
-        console.log('DEBUG: Ejecutando query Supabase (con joins opcionales)...');
-        // Query simplificada: Usa left joins implícitos con fallback
+        console.log('DEBUG: Ejecutando query Supabase...');
         const { data: viajes, error } = await supabaseClient
-    .from('viajes_medellin_norte')
-    .select(`
-        *,
-        conductores_medellin_norte!inner (nombre),
-        vehiculos_medellin_norte!inner (numero_interno),
-        tablas_medellin_norte!inner (nombre_tabla)
-    `)
+            .from('viajes_medellin_norte')
+            .select(`
+                *,
+                conductores_medellin_norte!inner (nombre),
+                vehiculos_medellin_norte!inner (numero_interno),
+                tablas_medellin_norte!inner (nombre_tabla)
+            `)
             .order('created_at', { ascending: false });
 
-        console.log('DEBUG: Respuesta Supabase - Data:', viajes?.length || 0, 'Error:', error);  // DEBUG: Muestra count/error
-
-        if (error) {
-            console.error('DEBUG: Error en query:', error.code, error.message);
-            throw error;
-        }
+        if (error) throw error;
 
         if (!viajes || viajes.length === 0) {
-            console.log('DEBUG: Tabla vacía - No hay viajes.');
-            tablaContainer.innerHTML = '<div class="empty-state"><i class="fas fa-table"></i><h3>No se encontraron registros</h3><p>La tabla está vacía. Verifica inserts en Supabase o prueba guardar un viaje nuevo.</p></div>';
+            tablaContainer.innerHTML = '<div class="empty-state"><i class="fas fa-table"></i><h3>No se encontraron registros</h3><p>La tabla está vacía.</p></div>';
             btnCargar.disabled = false;
             return;
         }
-
-        console.log('DEBUG: Generando tabla con', viajes.length, 'registros...');
 
         let tablaHTML = `
             <table>
@@ -1221,103 +1212,88 @@ async function cargarRegistros() {
                 <tbody>`;
 
         viajes.forEach(viaje => {
-            // Fallback para joins (si null, usa 'N/A')
-          const conductor = viaje.conductores_medellin_norte?.nombre || 'N/A';
-          const vehiculo = viaje.vehiculos_medellin_norte?.numero_interno || 'N/A';
-          const tabla = viaje.tablas_medellin_norte?.nombre_tabla || 'N/A';
-            // Resumen y detalle puntos de control
+            const conductor = viaje.conductores_medellin_norte?.nombre || 'N/A';
+            const vehiculo = viaje.vehiculos_medellin_norte?.numero_interno || 'N/A';
+            const tabla = viaje.tablas_medellin_norte?.nombre_tabla || 'N/A';
+            
             const puntosControlResumen = viaje.puntos_control_detalle ?
-    viaje.puntos_control_detalle.map(p => `[${p.label}: ${p.estado}]`).join(', ') : 'N/A';
-// NUEVA LÍNEA: Formateo como lista legible para popup
-   const puntosControlDetalle = viaje.puntos_control_detalle ? 
-    '<ul style="margin: 0; padding-left: 1rem; list-style-type: disc;">' + 
-    viaje.puntos_control_detalle.map(p => 
-        `<li><strong>${p.label}:</strong> Estado: ${p.estado} | Proyección: ${p.proyeccion || 'N/A'} | Justificado: ${p.justificado || 'N/A'} | Hora Real: ${p.hora_real || 'N/A'}</li>`
-    ).join('') + 
-    '</ul>' : 
-    'N/A';
+                viaje.puntos_control_detalle.map(p => `[${p.label}: ${p.estado}]`).join(', ') : 'N/A';
+            
+            const puntosControlDetalle = viaje.puntos_control_detalle ? 
+                '<ul style="margin: 0; padding-left: 1rem; list-style-type: disc;">' + 
+                viaje.puntos_control_detalle.map(p => 
+                    `<li><strong>${p.label}:</strong> Estado: ${p.estado} | Proyección: ${p.proyeccion || 'N/A'} | Justificado: ${p.justificado || 'N/A'} | Hora Real: ${p.hora_real || 'N/A'}</li>`
+                ).join('') + 
+                '</ul>' : 
+                'N/A';
 
-            // Resto de lógica para infracciones y advertencia (copia del original si no está)
             const salidaProgramadaMins = timeToMinutes(viaje.salida_programada || '00:00');
             const salidaRealMins = timeToMinutes(viaje.salida_real || '00:00');
-            const retrasoSalida = salidaRealMins - salidaProgramadaMins > 0 ? salidaRealMins - salidaProgramadaMins : 0;
+            
+            // ✅ CORRECCIÓN: Aplicar minuto de gracia en el cálculo del retraso
+            let retrasoSalida = salidaRealMins - salidaProgramadaMins;
+            retrasoSalida = retrasoSalida > 1 ? retrasoSalida : 0; // Minuto de gracia
 
             let hayInfraccion = false;
-        let advertencia = '';
-// NUEVO: Chequea solo injustificados
-const justificadoSalida = viaje.retraso_salida_justificado || false;  // Del DB
-const hayPuntoInjustif = viaje.puntos_control_detalle ? viaje.puntos_control_detalle.some(p => p.estado === 'tarde' && p.justificado === 'no') : false;
-if ((retrasoSalida > 0 && !justificadoSalida) || hayPuntoInjustif) {
-    hayInfraccion = true;
-    // ... (resto del bloque igual: conductor, vehiculo, forEach, template)
+            let advertencia = '';
 
-    const conductor = viaje.conductores_medellin_norte?.nombre || 'Desconocido';
-    const vehiculo = viaje.vehiculos_medellin_norte?.numero_interno || '000';
-    const tabla = viaje.tablas_medellin_norte?.nombre_tabla || '00';
-    const fechaActual = new Date().toLocaleDateString('es-CO');  // DD/MM/YYYY local
+            const justificadoSalida = viaje.retraso_salida_justificado || false;
+            const hayPuntoInjustif = viaje.puntos_control_detalle ? 
+                viaje.puntos_control_detalle.some(p => p.estado === 'tarde' && p.justificado === 'no') : false;
 
-    const puntosControlConfig = CONFIG_MEDELLIN_NORTE.CONFIG_PUNTOS_CONTROL[viaje.ruta] || [];
-    let mensajePuntos = '';
+            // ✅ CORRECCIÓN: Solo considerar retraso si es mayor a 1 minuto
+            if ((retrasoSalida > 0 && !justificadoSalida) || hayPuntoInjustif) {
+                hayInfraccion = true;
 
+                const puntosControlConfig = CONFIG_MEDELLIN_NORTE.CONFIG_PUNTOS_CONTROL[viaje.ruta] || [];
+                let mensajePuntos = '';
 
-let horaAnterior = timeToMinutes(viaje.salida_real || '00:00');  // Base salida
-let labelsPrevios = [];  // Rastrear labels
+                let horaAnterior = timeToMinutes(viaje.salida_real || '00:00');
+                let labelsPrevios = [];
 
-// El forEach
-viaje.puntos_control_detalle.forEach(punto => {
-    const configPunto = puntosControlConfig.find(pc => pc.id === punto.id);
-    if (!configPunto) return;
+                viaje.puntos_control_detalle.forEach(punto => {
+                    const configPunto = puntosControlConfig.find(pc => pc.id === punto.id);
+                    if (!configPunto) return;
 
-    let labelAjustado = punto.label;
-    
-    // ✅ ACTUALIZADO: Rutas de Medellín Norte
-    if (viaje.ruta === 'La Ceja - Medellín Norte') {
-        // Mantener los labels originales o ajustar si es necesario
-        if (punto.label.includes('CIT-Los Memos')) labelAjustado = 'CIT-Los Memos';
-        else if (punto.label.includes('Terminal del Norte')) labelAjustado = 'Terminal del Norte';
-    } else if (viaje.ruta === 'Medellín Norte - La Ceja') {
-        // Mantener los labels originales o ajustar si es necesario
-        if (punto.label.includes('Terminal del Norte-Exposiciones')) labelAjustado = 'Terminal del Norte-Exposiciones';
-        else if (punto.label.includes('Exposiciones-La Ceja')) labelAjustado = 'Exposiciones-La Ceja';
-    }
+                    let labelAjustado = punto.label;
+                    
+                    if (viaje.ruta === 'La Ceja - Medellín Norte') {
+                        if (punto.label.includes('CIT-Los Memos')) labelAjustado = 'CIT-Los Memos';
+                        else if (punto.label.includes('Terminal del Norte')) labelAjustado = 'Terminal del Norte';
+                    } else if (viaje.ruta === 'Medellín Norte - La Ceja') {
+                        if (punto.label.includes('Terminal del Norte-Exposiciones')) labelAjustado = 'Terminal del Norte-Exposiciones';
+                        else if (punto.label.includes('Exposiciones-La Ceja')) labelAjustado = 'Exposiciones-La Ceja';
+                    }
 
-    labelsPrevios.push(labelAjustado);
-    
-    // ✅ USAR hora real O proyección si no hay hora real
-    const horaRealActual = timeToMinutes(punto.hora_real || punto.proyeccion || '00:00');
+                    labelsPrevios.push(labelAjustado);
+                    
+                    const horaRealActual = timeToMinutes(punto.hora_real || punto.proyeccion || '00:00');
 
-    if (punto.estado === 'tarde' && punto.justificado === 'no') {
-        const tiempoEstablecido = configPunto.duracion;
-        
-        // ✅ CÁLCULO CORRECTO DEL SEGMENTO
-        const tiempoRealSegmento = horaRealActual - horaAnterior;
-        
-        // ✅ CÁLCULO CORRECTO DE LA DEMORA (vs proyección)
-        const proyeccionMins = timeToMinutes(punto.proyeccion || '00:00');
-        const horaRealMins = timeToMinutes(punto.hora_real || '00:00');
-        const demoraReal = horaRealMins - proyeccionMins;
-        
-        const horaProyectada = punto.proyeccion || 'N/A';
-        const horaRealPunto = punto.hora_real || 'N/A';
-        const puntoAnteriorLabel = labelsPrevios.length > 1 ? labelsPrevios[labelsPrevios.length - 2] : 'La Terminal';
-        
-        // ✅ MENSAJE ACTUALIZADO para Medellín Norte
-        mensajePuntos += `Llegada tarde al punto de control ${labelAjustado} (Hora proyectada: ${horaProyectada} | Hora real: ${horaRealPunto} | Se demoró ${demoraReal} min más), el cual tiene un tiempo establecido de viaje de ${tiempoEstablecido} Min, teniendo un tiempo de recorrido ${tiempoRealSegmento} minutos en este tramo desde ${puntoAnteriorLabel}.\n`;
-    }
-    
-    // ✅ ACTUALIZAR horaAnterior DESPUÉS del cálculo
-    horaAnterior = horaRealActual;
-});
-    // Template por ruta (exacto a tu spec)
-// ✅ TEMPLATE MEJORADO - Incluye TODA la información SIEMPRE
-let template = '';
-if (viaje.ruta === 'La Ceja - Medellín Norte') {
-    template = `
+                    if (punto.estado === 'tarde' && punto.justificado === 'no') {
+                        const tiempoEstablecido = configPunto.duracion;
+                        const tiempoRealSegmento = horaRealActual - horaAnterior;
+                        
+                        const proyeccionMins = timeToMinutes(punto.proyeccion || '00:00');
+                        const horaRealMins = timeToMinutes(punto.hora_real || '00:00');
+                        const demoraReal = horaRealMins - proyeccionMins;
+                        
+                        const horaProyectada = punto.proyeccion || 'N/A';
+                        const horaRealPunto = punto.hora_real || 'N/A';
+                        const puntoAnteriorLabel = labelsPrevios.length > 1 ? labelsPrevios[labelsPrevios.length - 2] : 'La Terminal';
+                        
+                        mensajePuntos += `Llegada tarde al punto de control ${labelAjustado} (Hora proyectada: ${horaProyectada} | Hora real: ${horaRealPunto} | Se demoró ${demoraReal} min más), el cual tiene un tiempo establecido de viaje de ${tiempoEstablecido} Min, teniendo un tiempo de recorrido ${tiempoRealSegmento} minutos en este tramo desde ${puntoAnteriorLabel}.\n`;
+                    }
+                    
+                    horaAnterior = horaRealActual;
+                });
+
+                // ✅ CORRECCIÓN: Solo mostrar salida tarde si retraso > 1 minuto
+                let template = `
 Fecha del Viaje: ${viaje.fecha_monitoreo}
 Conductor: ${conductor}
 Vehículo: ${vehiculo}
 Tabla: ${tabla}
-Ruta: La Ceja - Medellín Norte
+Ruta: ${viaje.ruta}
 
 ${retrasoSalida > 0 ? `Salida tarde de ${retrasoSalida} minutos (Hora programada: ${viaje.salida_programada} vs. Hora real: ${viaje.salida_real}).\n` : ''}
 
@@ -1327,40 +1303,22 @@ Le recordamos que la puntualidad es uno de nuestros valores corporativos, por ta
 
 Muchas Gracias y Feliz dia! le desea: Atentamente,
 El area de operaciones.`;
-} else if (viaje.ruta === 'Medellín Norte - La Ceja') {
-    template = `
-Fecha del Viaje: ${viaje.fecha_monitoreo}
-Conductor: ${conductor}
-Vehículo: ${vehiculo}
-Tabla: ${tabla}
-Ruta: Medellín Norte - La Ceja
 
-${retrasoSalida > 0 ? `Salida tarde de ${retrasoSalida} minutos (Hora programada: ${viaje.salida_programada} vs. Hora real: ${viaje.salida_real}).\n` : ''}
+                advertencia = template.trim();
+            }
 
-${mensajePuntos}
+            let celdaPuntos = `
+                <td class="puntos-control-cell">
+                    <div class="puntos-control-summary">${puntosControlResumen}</div>
+                    <div class="puntos-control-popup">${puntosControlDetalle}</div>`;
 
-Le recordamos que la puntualidad es uno de nuestros valores corporativos, por tanto debemos respetarlos a cabalidad. Recuerde por favor cumplir los tiempos establecidos en cada una de las rutas de la empresa y salir conforme a la hora de salida programada por tabla. Esperamos que esta situación no se repita ya que en caso de reincidencia nos veremos en la obligación de notificarlo al área de gestión humana para iniciar un proceso disciplinario.
+            if (hayInfraccion && advertencia) {
+                celdaPuntos += `<br><button class="btn-copiar-advertencia" data-advertencia="${encodeURIComponent(advertencia)}"><i class="fas fa-copy"></i> Copiar Advertencia</button>`;
+            }
+            celdaPuntos += `</td>`;
 
-Muchas Gracias y Feliz dia! le desea: Atentamente,
-El area de operaciones.`;
-}
-
-advertencia = template.trim();
-
-    advertencia = template.trim();
-}
-
-let celdaPuntos = `
-    <td class="puntos-control-cell">
-        <div class="puntos-control-summary">${puntosControlResumen}</div>
-        <div class="puntos-control-popup">${puntosControlDetalle}</div>`;
-
-if (hayInfraccion && advertencia) {
-    celdaPuntos += `<br><button class="btn-copiar-advertencia" data-advertencia="${encodeURIComponent(advertencia)}"><i class="fas fa-copy"></i> Copiar Advertencia</button>`;
-}
-celdaPuntos += `</td>`;
-const claseEstado = viaje.clasificacion_final === "A Tiempo" ? 'status-badge success' : 
-    (viaje.clasificacion_final === "Novedad Leve" ? 'status-badge warning' : 'status-badge error');
+            const claseEstado = viaje.clasificacion_final === "A Tiempo" ? 'status-badge success' : 
+                (viaje.clasificacion_final === "Novedad Leve" ? 'status-badge warning' : 'status-badge error');
 
             tablaHTML += `
                 <tr>
@@ -1388,35 +1346,28 @@ const claseEstado = viaje.clasificacion_final === "A Tiempo" ? 'status-badge suc
 
         tablaHTML += `</tbody></table>`;
         tablaContainer.innerHTML = tablaHTML;
-        document.querySelectorAll('.btn-copiar-advertencia').forEach(btn => {
-    btn.addEventListener('click', function() {
-        const mensaje = decodeURIComponent(this.dataset.advertencia);
-        navigator.clipboard.writeText(mensaje)
-            .then(() => {
-                alert('✅ Mensaje de advertencia copiado al portapapeles!');
-            })
-            .catch(err => {
-                console.error('Error al copiar:', err);
-                alert('❌ Error al copiar el mensaje');
-            });
-    });
-});
 
-        // Eventos para botones (idéntico)
+        // Eventos para botones de copiar advertencia
         document.querySelectorAll('.btn-copiar-advertencia').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const mensaje = decodeURIComponent(btn.dataset.advertencia);
-                navigator.clipboard.writeText(mensaje).then(() => alert('Mensaje de adevertencia, para el conductor, Copiado!')).catch(err => console.error(err));
+            btn.addEventListener('click', function() {
+                const mensaje = decodeURIComponent(this.dataset.advertencia);
+                navigator.clipboard.writeText(mensaje)
+                    .then(() => {
+                        alert('✅ Mensaje de advertencia copiado al portapapeles!');
+                    })
+                    .catch(err => {
+                        console.error('Error al copiar:', err);
+                        alert('❌ Error al copiar el mensaje');
+                    });
             });
         });
 
-        console.log('DEBUG: Tabla generada exitosamente.');
     } catch (error) {
-        console.error('DEBUG: Error completo:', error);  // DEBUG detallado
+        console.error('Error al cargar registros:', error);
         tablaContainer.innerHTML = `<div class="empty-state" style="color: var(--danger-color);">
             <i class="fas fa-exclamation-triangle"></i>
             <h3>Error al cargar</h3>
-            <p>${error.message}. Chequea consola y Supabase.</p>
+            <p>${error.message}</p>
         </div>`;
     } finally {
         btnCargar.disabled = false;
