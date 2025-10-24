@@ -1,4 +1,4 @@
-// ===== CONFIGURACIÓN MEDELLÍN NORTE =====
+// ===== CONFIGURACIÓN MEDELLÍN NORTE =====//prueba
 const CONFIG_MEDELLIN_NORTE = {
     RUTA: "Medellín Norte",
     TABLAS_SUPABASE: {
