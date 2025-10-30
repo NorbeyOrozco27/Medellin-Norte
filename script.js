@@ -764,8 +764,7 @@ async function cargarInformeAdvertencias() {
         }
 
         // Contar advertencias por conductor
-        const advertenciasPorConductor = {};
-        const evidenciasPorConductor = {};
+        const advertenciasPorConductor = {}; 
         // punto B, falta los otros
         viajes.forEach(viaje => {
     const conductor = viaje.conductores_medellin_norte?.nombre || 'Desconocido';
@@ -777,7 +776,7 @@ async function cargarInformeAdvertencias() {
     const retrasoSalida = salidaRealMins - salidaProgramadaMins > 0 ? salidaRealMins - salidaProgramadaMins : 0;
 
     // ✅ NUEVA LÓGICA - Verificar salida injustificada
-    if (retrasoSalida > 0 && !viaje.retraso_salida_justificado) {
+    if (retrasoSalida > 1 && !viaje.retraso_salida_justificado) {
         hayInfraccionInjustificada = true;
     }
 
@@ -900,7 +899,7 @@ async function cargarInformeDescargos() {
             const retrasoSalida = salidaRealMins - salidaProgramadaMins > 0 ? salidaRealMins - salidaProgramadaMins : 0;
 
             // Verificar salida injustificada
-            if (retrasoSalida > 0 && !viaje.retraso_salida_justificado) {
+            if (retrasoSalida > 1 && !viaje.retraso_salida_justificado) {
                 hayInfraccionInjustificada = true;
             }
 
