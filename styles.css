@@ -810,4 +810,4 @@ input:focus, select:focus, textarea:focus {
 .puntos-control-cell input[type="radio"].estado-checkbox:checked + label {
     color: white !important; /* Cambia el color del texto si lo deseas */
     font-weight: bold; /* Opcional: resaltar el texto seleccionado */
-}
+} 
