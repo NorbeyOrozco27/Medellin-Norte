@@ -765,7 +765,7 @@ async function cargarInformeAdvertencias() {
 
         // Contar advertencias por conductor
         const advertenciasPorConductor = {}; 
-        // punto B, falta los otros
+        const evidenciasPorConductor = {}; 
         viajes.forEach(viaje => {
     const conductor = viaje.conductores_medellin_norte?.nombre || 'Desconocido';
     let hayInfraccionInjustificada = false;  // ✅ Bien declarado
