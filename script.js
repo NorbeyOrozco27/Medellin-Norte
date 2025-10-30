@@ -766,6 +766,7 @@ async function cargarInformeAdvertencias() {
         // Contar advertencias por conductor
         const advertenciasPorConductor = {}; 
         const evidenciasPorConductor = {}; 
+     
         // punto B, falta los otros
         viajes.forEach(viaje => {
     const conductor = viaje.conductores_medellin_norte?.nombre || 'Desconocido';
