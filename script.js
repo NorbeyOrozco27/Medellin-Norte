@@ -1243,7 +1243,7 @@ async function cargarRegistros() { ///cambio de funcion
                 viaje.puntos_control_detalle.some(p => p.estado === 'tarde' && p.justificado === 'no') : false;
 
             // ✅ CORRECCIÓN: Solo considerar retraso si es mayor a 1 minuto
-            if ((retrasoSalida > 0 && !justificadoSalida) || hayPuntoInjustif) {
+            if ((retrasoSalida > 1 && !justificadoSalida) || hayPuntoInjustif) { // cambio aqui
                 hayInfraccion = true;
 
                 const puntosControlConfig = CONFIG_MEDELLIN_NORTE.CONFIG_PUNTOS_CONTROL[viaje.ruta] || [];
